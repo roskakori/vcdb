@@ -19,6 +19,7 @@ lib/
 lib64/
 parts/
 sdist/
+tests/temp
 var/
 *.egg-info/
 .installed.cfg
@@ -87,3 +88,6 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Pycharm project settings
+.idea
