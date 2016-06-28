@@ -8,7 +8,7 @@ import subprocess
 import unittest
 import urllib
 
-from vcdb.subversion import svn, svn_log
+from vcdb.subversion import run_svn, write_svn_log_xml
 from vcdb import common
 from vcdb import subversion
 
@@ -46,8 +46,8 @@ class SubversionTest(unittest.TestCase):
 
         # Create repository and check it out.
         self._svnadmin(['create', repo_path])
-        svn('mkdir', '--message', 'Added project folder.', '--parents', project_trunk_uri)
-        svn('checkout', project_trunk_uri, work_path)
+        run_svn('mkdir', '--message', 'Added project folder.', '--parents', project_trunk_uri)
+        run_svn('checkout', project_trunk_uri, work_path)
 
         # Write empty.txt.
         empty_txt_path = os.path.join(work_path, 'empty.txt')
@@ -61,8 +61,8 @@ class SubversionTest(unittest.TestCase):
         ])
 
         # Add and commit files.
-        svn('add', empty_txt_path, hello_py_path)
-        svn('commit', '--message', 'Added tool to greet.', work_path)
+        run_svn('add', empty_txt_path, hello_py_path)
+        run_svn('commit', '--message', 'Added tool to greet.', work_path)
 
         subversion.update_repository(self.session, repository_uri)
 

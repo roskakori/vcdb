@@ -23,7 +23,7 @@ _SUBVERSION_ACTION_TO_PATH_ACTION_MAP = {
 _log = logging.getLogger('vcdb.subversion')
 
 
-def path_to_add(change, path_element):
+def path_from_path_element(change, path_element):
     assert change is not None
     assert path_element is not None
 
@@ -46,7 +46,7 @@ def path_to_add(change, path_element):
     return result
 
 
-def change_to_add(session, repository, logentry_element):
+def change_from_logentry_element(session, repository, logentry_element):
         assert logentry_element.tag == 'logentry'
         author = logentry_element.find('author').text
         change_id = logentry_element.attrib['revision']
@@ -64,7 +64,11 @@ def change_to_add(session, repository, logentry_element):
         )
         return result
 
-def svn(command, *options):
+
+def run_svn(command, *options):
+    """
+    Run a subversion command using the svn command line client.
+    """
     command_parts = [
         'svn',
         command,
@@ -73,11 +77,11 @@ def svn(command, *options):
         '--quiet',
     ]
     command_parts.extend(list(options))
-    _log.info(' '.join(command_parts))
+    _log.debug('  %s', ' '.join(command_parts))
     subprocess.check_call(command_parts)
 
 
-def svn_log(target_xml_path, uri, revision=None):
+def write_svn_log_xml(svn_log_xml_path, uri, revision=None):
     command_parts = [
         'svn',
         'log',
@@ -92,8 +96,9 @@ def svn_log(target_xml_path, uri, revision=None):
             '--revision',
             revision
         ])
-    _log.info(' '.join(command_parts))
-    with open(target_xml_path, 'wb') as target_xml_file:
+    _log.info('export subversion log for revision %s', revision)
+    _log.debug('  %s', ' '.join(command_parts))
+    with open(svn_log_xml_path, 'wb') as target_xml_file:
         xml_data = subprocess.check_output(command_parts)
         target_xml_file.write(xml_data)
 
@@ -120,19 +125,22 @@ def update_repository(session, repository_uri):
     assert repository_uri is not None
 
     repository = repository_for(session, repository_uri)
-    revision = '0:HEAD' # TODO: Update starting from last change.
+    revision = '0:HEAD' # TODO: Update starting revison from last change.
     svn_log_xml_path = os.path.join(tempfile.gettempdir(), 'vcdb', 'svn_log.xml')  # TODO: Use a real temporary name.
 
-    # Extract log parse it.
-    svn_log(svn_log_xml_path, repository_uri, revision)
+    # Extract and log parse it.
+    write_svn_log_xml(svn_log_xml_path, repository_uri, revision)
     _log.info('read subversion log from %s', svn_log_xml_path)
     log_root = ElementTree.parse(svn_log_xml_path)
+
+    # Process log and add changes and paths.
     for logentry_element in log_root.findall('logentry[@revision]'):
-        change = change_to_add(session, repository, logentry_element)
+        change = change_from_logentry_element(session, repository, logentry_element)
+        _log.debug('  add change: %s', change)
         session.add(change)
         for path_element in logentry_element.findall('paths/path'):
-            path = path_to_add(change, path_element)
-            _log.info('add path: %s', path)
+            path = path_from_path_element(change, path_element)
+            _log.debug('    add path: %s', path)
             session.add(path)
     session.commit()
 
