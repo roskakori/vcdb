@@ -5,7 +5,7 @@ import os
 import shutil
 
 import sqlalchemy
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, PrimaryKeyConstraint, String, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
@@ -34,19 +34,25 @@ def ensure_folder_is_empty(empty_path):
     os.makedirs(empty_path, exist_ok=True)
 
 
+#: Maximum number of characters to represent an author.
+AUTHOR_LENGTH = 16
+
 #: Maximum number of characters to represent a Change.change_id.
-CHANGE_ID_LENGTH = 32
+CHANGE_ID_LENGTH = 16  # NOTE: The Linux Kernel currently uses 12 characters for git hashes.
 
 #: Maximum number of characters to store in Change.commit_message.
 COMMIT_MESSAGE_LENGTH = 1020
+
+#: Maximum number of characters to represent a URI or a path in the repository.
+PATH_LENGTH = 512
 
 DeclarativeBase = declarative_base()
 
 
 class Repository(DeclarativeBase):
     __tablename__ = 'repositories'
-    repository_id = Column(Integer, nullable=False, primary_key=True)
-    uri = Column(String(255), nullable=False)
+    repository_id = Column(Integer, autoincrement=True, nullable=False, primary_key=True)
+    uri = Column(String(PATH_LENGTH), nullable=False)
     last_change_id = Column(String(CHANGE_ID_LENGTH))  # NOTE: Not a ForeignKey to avoid circular dependency.
 
     UniqueConstraint('uri')
@@ -63,10 +69,10 @@ class Change(DeclarativeBase):
     """
     __tablename__ = 'changes'
     change_id = Column(String(CHANGE_ID_LENGTH), nullable=False, primary_key=True)
-    author = Column(String(16))
+    author = Column(String(AUTHOR_LENGTH))
     commit_message = Column(String(COMMIT_MESSAGE_LENGTH), nullable=False)
     commit_time = Column(DateTime, nullable=False)
-    repository_id = Column(Integer, ForeignKey('repositories.repository_id'))
+    repository_id = Column(Integer, ForeignKey('repositories.repository_id'), nullable=False)
     repository = relationship(
         'Repository',
         back_populates='changes',
@@ -80,8 +86,33 @@ class Change(DeclarativeBase):
         )
 
 
-Repository.changes = relationship('Change', back_populates='repository')
+class Path(DeclarativeBase):
+    """
+    A versioned path.
+    """
+    __tablename__ = 'paths'
+    __table_args__ = (
+        PrimaryKeyConstraint('repository_id', 'change_id', 'path'),
+    )
+    repository_id = Column(Integer, ForeignKey('repositories.repository_id'), nullable=False)
+    change_id = Column(String(CHANGE_ID_LENGTH), ForeignKey('changes.change_id'), nullable=False)
+    path = Column(String(PATH_LENGTH), nullable=False)
+    kind = Column(
+        Enum('d', 'f'), nullable=False,
+        doc='d=directory, f=file')
+    action = Column(
+        Enum('a', 'c', 'd', 'e', 'm'), nullable=False,
+        doc='a=added, c=copied, d=deleted, e=edited, m=moved')
+    # TODO: base_change_id = Column(String(CHANGE_ID_LENGTH), ForeignKey('changes.change_id'))
+    # TODO: base_path = Column(String(PATH_LENGTH))
 
+    def __repr__(self):
+        return '<Path(action=%r, kind=%r, path=%r, repository_id=%r, change_id=%r' % (
+            self.action, self.kind, self.path, self.repository_id, self.change_id
+        )
+
+
+Repository.changes = relationship('Change', back_populates='repository')
 
 def vcdb_session(engine_uri):
     assert engine_uri is not None

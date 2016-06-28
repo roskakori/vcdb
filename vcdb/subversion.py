@@ -12,25 +12,41 @@ import vcdb.common as common
 
 STRFTIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
 
+_SUBVERSION_KIND_TO_PATH_KIND_MAP = {
+    'dir': 'd',
+    'file': 'f',
+}
+_SUBVERSION_ACTION_TO_PATH_ACTION_MAP = {
+    'A': 'a',
+    'D': 'd',
+}
 _log = logging.getLogger('vcdb.subversion')
 
 
+def path_to_add(change, path_element):
+    assert change is not None
+    assert path_element is not None
 
-class LogEntryPath():
-    def __init__(self, logentry, path_element):
-        assert logentry is not None
-        assert path_element.tag == 'path'
+    path = path_element.text
+    svn_kind = path_element.attrib['kind']
+    try:
+        kind = _SUBVERSION_KIND_TO_PATH_KIND_MAP[svn_kind]
+    except KeyError:
+        assert False, 'kind=%r must be added to _SUBVERSION_KIND_TO_PATH_KIND_MAP' % svn_kind
+    svn_action = path_element.attrib['action']
+    try:
+        action = _SUBVERSION_ACTION_TO_PATH_ACTION_MAP[svn_action]
+    except KeyError:
+        assert False, 'action=%r must be added to _SUBVERSION_ACTION_TO_PATH_ACTION_MAP' % svn_action
+    result = common.Path(
+        action=action,
+        change_id=change.change_id,
+        kind=kind, path=path,
+        repository_id=change.repository_id)
+    return result
 
-        self.path = path_element.text
-        self.kind = path_element.attrib['kind']
-        self.action = path_element.attrib['action']
-        self._logentry = logentry
 
-    def as_changed_path(self):
-        return common.ChangedPath(self._logentry.change_id, self.action, self.kind, self.path)
-
-
-def add_change_from_logentry(session, repository, logentry_element):
+def change_to_add(session, repository, logentry_element):
         assert logentry_element.tag == 'logentry'
         author = logentry_element.find('author').text
         change_id = logentry_element.attrib['revision']
@@ -39,16 +55,14 @@ def add_change_from_logentry(session, repository, logentry_element):
         # HACK: Strip the trailing 'Z' which seems to be there for reasons unknown.
         commit_time_text = commit_time_text[:-1]
         commit_time = datetime.datetime.strptime(commit_time_text, STRFTIME_FORMAT)
-        # TODO: paths = [LogEntryPath(path_element) for path_element in logentry_element.findall('path/paths')]
-        change = common.Change(
+        result = common.Change(
             author=author,
             change_id=change_id,
             commit_time=commit_time,
             commit_message=commit_message,
             repository_id=repository.repository_id
         )
-        session.add(change)
-
+        return result
 
 def svn(command, *options):
     command_parts = [
@@ -94,6 +108,7 @@ def repository_for(session, repository_uri):
         _log.info('add new repository: %r', repository_uri)
         result = common.Repository(uri=repository_uri)
         session.add(result)
+        session.commit()
     else:
         assert existing_repository_count == 1, "Repository.UniqueConstraint('uri') must avoid duplicates"
         result = existing_repositories[0]
@@ -113,4 +128,11 @@ def update_repository(session, repository_uri):
     _log.info('read subversion log from %s', svn_log_xml_path)
     log_root = ElementTree.parse(svn_log_xml_path)
     for logentry_element in log_root.findall('logentry[@revision]'):
-        add_change_from_logentry(session, repository, logentry_element)
+        change = change_to_add(session, repository, logentry_element)
+        session.add(change)
+        for path_element in logentry_element.findall('paths/path'):
+            path = path_to_add(change, path_element)
+            _log.info('add path: %s', path)
+            session.add(path)
+    session.commit()
+

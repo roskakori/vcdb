@@ -4,7 +4,6 @@ Tests for Subversion repository.
 import logging
 import os
 import pathlib
-import shutil
 import subprocess
 import unittest
 import urllib
@@ -39,7 +38,7 @@ class SubversionTest(unittest.TestCase):
         project = common.func_name()
         project_path = os.path.join(_TEMP_FOLDER, project)
         common.ensure_folder_is_empty(project_path)
-        repo_path = os.path.join(project_path, 'repo')
+        repo_path = os.path.abspath(os.path.join(project_path, 'repo'))
         work_path = os.path.join(project_path, 'work')
         log_xml_path = os.path.join(project_path, project + '_log.xml')
         repository_uri = pathlib.Path(repo_path).as_uri() + '/'
