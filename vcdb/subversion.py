@@ -19,6 +19,7 @@ _SUBVERSION_KIND_TO_PATH_KIND_MAP = {
 _SUBVERSION_ACTION_TO_PATH_ACTION_MAP = {
     'A': 'a',
     'D': 'd',
+    'M': 'e',
 }
 _log = logging.getLogger('vcdb.subversion')
 
@@ -38,8 +39,20 @@ def path_from_path_element(change, path_element):
         action = _SUBVERSION_ACTION_TO_PATH_ACTION_MAP[svn_action]
     except KeyError:
         assert False, 'action=%r must be added to _SUBVERSION_ACTION_TO_PATH_ACTION_MAP' % svn_action
+
+    base_commit_id = path_element.attrib.get('copyfrom-rev')
+    base_path = path_element.attrib.get('copyfrom-path')
+    if base_commit_id is not None:
+        action = 'c'
+        base_change_id = common.change_id_for(change.repository_id, base_commit_id)
+    else:
+        if base_path is not None:
+            raise common.VcdbError('on base_commit_id=None, base_path must be None but is: %r' % base_path)
+        base_change_id = None
     result = common.Path(
         action=action,
+        base_change_id=base_change_id,
+        base_path=base_path,
         change_id=change.change_id,
         kind=kind, path=path,
         repository_id=change.repository_id)
@@ -49,15 +62,17 @@ def path_from_path_element(change, path_element):
 def change_from_logentry_element(session, repository, logentry_element):
         assert logentry_element.tag == 'logentry'
         author = logentry_element.find('author').text
-        change_id = logentry_element.attrib['revision']
+        commit_id = logentry_element.attrib['revision']
         commit_message = logentry_element.find('msg').text
         commit_time_text = logentry_element.find('date').text
         # HACK: Strip the trailing 'Z' which seems to be there for reasons unknown.
         commit_time_text = commit_time_text[:-1]
         commit_time = datetime.datetime.strptime(commit_time_text, STRFTIME_FORMAT)
+        change_id = common.change_id_for(repository.repository_id, commit_id)
         result = common.Change(
             author=author,
             change_id=change_id,
+            commit_id=commit_id,
             commit_time=commit_time,
             commit_message=commit_message,
             repository_id=repository.repository_id
@@ -142,5 +157,20 @@ def update_repository(session, repository_uri):
             path = path_from_path_element(change, path_element)
             _log.debug('    add path: %s', path)
             session.add(path)
+        copied_paths = session.query(common.Path).filter(
+            common.Path.change_id == change.change_id,
+            common.Path.action == 'c'
+        ).all()
+        # Change action of copied paths with base_path removed to 'm' (moved).
+        for copied_path in copied_paths:
+            deleted_path_count = session.query(common.Path).filter(
+                common.Path.change_id == change.change_id,
+                common.Path.action == 'd',
+                common.Path.path == copied_path.base_path
+            ).delete()
+            if deleted_path_count == 1:
+                copied_path.action = 'm'
+            else:
+                assert deleted_path_count == 0
     session.commit()
 

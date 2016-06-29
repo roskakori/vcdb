@@ -53,6 +53,11 @@ class SubversionTest(unittest.TestCase):
         empty_txt_path = os.path.join(work_path, 'empty.txt')
         self._write_source(empty_txt_path)
 
+        # Write useless.txt.
+        useless_txt_path = os.path.join(work_path, 'useless.txt')
+        self._write_source(useless_txt_path)
+
+
         # Write hello.py.
         hello_py_path = os.path.join(work_path, 'hello.py')
         self._write_source(hello_py_path, [
@@ -61,11 +66,37 @@ class SubversionTest(unittest.TestCase):
         ])
 
         # Add and commit files.
-        run_svn('add', empty_txt_path, hello_py_path)
+        run_svn('add', empty_txt_path, hello_py_path, useless_txt_path)
         run_svn('commit', '--message', 'Added tool to greet.', work_path)
+
+        # Remove useless file.
+        run_svn('remove', useless_txt_path)
+        run_svn('commit', '--message', 'Removed useless file.', useless_txt_path)
+
+        # Modify existing file.
+        self._write_source(hello_py_path, [
+            '# The classic hello world.'
+            'print("hello world!")',
+        ])
+        run_svn('commit', '--message', 'Added exclamation mark.', hello_py_path)
+
+        # Copy a file.
+        hello_again_py_path = os.path.join(work_path, 'hello_again.py')
+        run_svn('copy', hello_py_path, hello_again_py_path)
+        run_svn('commit', '--message', 'Added another tool to greet.', hello_again_py_path)
+
+        # Modify and move a file.
+        self._write_source(hello_py_path, [
+            '# Das klassische Hallo Welt.'
+            'print("Hallo Welt!")',
+        ])
+        hallo_py_path = os.path.join(work_path, 'hallo.py')
+        run_svn('move', '--force', hello_py_path, hallo_py_path)
+        run_svn('commit', '--message', 'Translated to German.', hallo_py_path, hello_py_path)
 
         subversion.update_repository(self.session, repository_uri)
 
+
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     unittest.main()

@@ -37,8 +37,13 @@ def ensure_folder_is_empty(empty_path):
 #: Maximum number of characters to represent an author.
 AUTHOR_LENGTH = 16
 
+MAX_REPOSITORY_ID_DIGITS = 2
+
+#: Maximum number of characters to represent a Change.commit_id.
+COMMIT_ID_LENGTH = 16  # NOTE: The Linux Kernel currently uses 12 characters for git hashes.
+
 #: Maximum number of characters to represent a Change.change_id.
-CHANGE_ID_LENGTH = 16  # NOTE: The Linux Kernel currently uses 12 characters for git hashes.
+CHANGE_ID_LENGTH = 1 + MAX_REPOSITORY_ID_DIGITS + COMMIT_ID_LENGTH
 
 #: Maximum number of characters to store in Change.commit_message.
 COMMIT_MESSAGE_LENGTH = 1020
@@ -47,6 +52,15 @@ COMMIT_MESSAGE_LENGTH = 1020
 PATH_LENGTH = 512
 
 DeclarativeBase = declarative_base()
+
+
+def change_id_for(repository_id, commit_id):
+    assert 0 < repository_id < 10 ** MAX_REPOSITORY_ID_DIGITS
+    assert repository_id is not None
+
+    result = '%0*d-%s' % (MAX_REPOSITORY_ID_DIGITS, repository_id, commit_id)
+    assert len(result) <= CHANGE_ID_LENGTH, 'result=%r' % result
+    return result
 
 
 class Repository(DeclarativeBase):
@@ -68,8 +82,9 @@ class Change(DeclarativeBase):
     A change that has been taken place in a certain repository.
     """
     __tablename__ = 'changes'
-    change_id = Column(String(CHANGE_ID_LENGTH), nullable=False, primary_key=True)
     author = Column(String(AUTHOR_LENGTH))
+    change_id = Column(String(CHANGE_ID_LENGTH), nullable=False, primary_key=True)
+    commit_id = Column(String(COMMIT_ID_LENGTH), nullable=False)
     commit_message = Column(String(COMMIT_MESSAGE_LENGTH), nullable=False)
     commit_time = Column(DateTime, nullable=False)
     repository_id = Column(Integer, ForeignKey('repositories.repository_id'), nullable=False)
@@ -92,7 +107,7 @@ class Path(DeclarativeBase):
     """
     __tablename__ = 'paths'
     __table_args__ = (
-        PrimaryKeyConstraint('repository_id', 'change_id', 'path'),
+        PrimaryKeyConstraint('change_id', 'path'),
     )
     repository_id = Column(Integer, ForeignKey('repositories.repository_id'), nullable=False)
     change_id = Column(String(CHANGE_ID_LENGTH), ForeignKey('changes.change_id'), nullable=False)
@@ -103,24 +118,28 @@ class Path(DeclarativeBase):
     action = Column(
         Enum('a', 'c', 'd', 'e', 'm'), nullable=False,
         doc='a=added, c=copied, d=deleted, e=edited, m=moved')
-    # TODO: base_change_id = Column(String(CHANGE_ID_LENGTH), ForeignKey('changes.change_id'))
-    # TODO: base_path = Column(String(PATH_LENGTH))
+    base_change_id = Column(String(CHANGE_ID_LENGTH), ForeignKey('changes.change_id'))
+    base_path = Column(String(PATH_LENGTH))
 
-    change = relationship(
-        'Change',
-        back_populates='paths',
-        cascade='all, delete, delete-orphan',
-        single_parent=True
-    )
+    #change = relationship(
+    #    'Change',
+    #    back_populates='paths',
+    #    cascade='all, delete, delete-orphan',
+    #    single_parent=True
+    #)
 
     def __repr__(self):
-        return '<Path(action=%r, kind=%r, path=%r, repository_id=%r, change_id=%r' % (
+        result = '<Path(action=%r, kind=%r, path=%r, repository_id=%r, change_id=%r' % (
             self.action, self.kind, self.path, self.repository_id, self.change_id
         )
+        if self.base_change_id is not None:
+            result += ', base_change_id=%r, base_path=%r' % (self.base_change_id, self.base_path)
+        result += '>'
+        return result
 
 
 Repository.changes = relationship('Change', back_populates='repository')
-Change.paths = relationship('Path', back_populates='change')
+#Change.paths = relationship('Path', back_populates='change')
 
 def vcdb_session(engine_uri):
     assert engine_uri is not None
