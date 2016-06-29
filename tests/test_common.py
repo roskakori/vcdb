@@ -7,14 +7,12 @@ import unittest
 
 from vcdb import common
 
-
-_TEMP_FOLDER = os.path.join(os.path.dirname(__file__), 'temp')
-os.makedirs(_TEMP_FOLDER, exist_ok=True)
+import tests
 
 
 class OrmTest(unittest.TestCase):
     def setUp(self):
-        self.database_path = os.path.join(_TEMP_FOLDER, 'ormtest.db')
+        self.database_path = os.path.join(tests.TEMP_FOLDER, 'ormtest.db')
         common.ensure_is_removed(self.database_path)
         engine_uri = 'sqlite:///' + self.database_path
         self.session = common.vcdb_session(engine_uri)
@@ -29,8 +27,8 @@ class OrmTest(unittest.TestCase):
 
         import sqlite3
         with sqlite3.connect(self.database_path) as db:
-            repositories = list(db.cursor().execute('select * from repositories'))
-        self.assertEqual(1, len(repositories))
+            repository_count = len(list(db.cursor().execute('select 1 from repositories')))
+        self.assertEqual(1, repository_count)
 
 
 if __name__ == '__main__':
