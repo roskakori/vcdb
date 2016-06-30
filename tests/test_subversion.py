@@ -111,6 +111,12 @@ class TestRepositoryBuilder():
         run_svn('add', empty_txt_path)
         run_svn('commit', '--message', 'Changed to a different kind of empty.', empty_txt_path)
 
+        # Add a file without commit message.
+        pointless_tmp_path = os.path.join(self.work_path, 'pointless.tmp')
+        _write_source(pointless_tmp_path)
+        run_svn('add', pointless_tmp_path)
+        run_svn('commit', '--message', '', pointless_tmp_path)
+
 
 class SubversionTest(unittest.TestCase):
     def setUp(self):

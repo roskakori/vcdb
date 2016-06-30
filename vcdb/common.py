@@ -85,7 +85,7 @@ class Change(DeclarativeBase):
     author = Column(String(AUTHOR_LENGTH))
     change_id = Column(String(CHANGE_ID_LENGTH), nullable=False, primary_key=True)
     commit_id = Column(String(COMMIT_ID_LENGTH), nullable=False)
-    commit_message = Column(String(COMMIT_MESSAGE_LENGTH), nullable=False)
+    commit_message = Column(String(COMMIT_MESSAGE_LENGTH))
     commit_time = Column(DateTime, nullable=False)
     repository_id = Column(Integer, ForeignKey('repositories.repository_id'), nullable=False)
     repository = relationship(
