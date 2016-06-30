@@ -2,6 +2,7 @@
 Utility functions to work with Subversion.
 """
 import datetime
+import io
 import logging
 import os
 import subprocess
@@ -17,9 +18,10 @@ _SUBVERSION_KIND_TO_PATH_KIND_MAP = {
     'file': 'f',
 }
 _SUBVERSION_ACTION_TO_PATH_ACTION_MAP = {
-    'A': 'a',
-    'D': 'd',
-    'M': 'e',
+    'A': 'a',  # added
+    'D': 'd',  # deleted
+    'M': 'e',  # modified (source and/or properties)
+    'R': 'e',  # replaced (using "svn remove" and "svn add" on the same file without any commit in between)
 }
 _log = logging.getLogger('vcdb.subversion')
 
@@ -118,6 +120,31 @@ def write_svn_log_xml(svn_log_xml_path, uri, revision=None):
         target_xml_file.write(xml_data)
 
 
+def svn_info_elements(uri):
+    command_parts = [
+        'svn',
+        'info',
+        '--no-auth-cache',
+        '--non-interactive',
+        '--xml',
+        uri,
+    ]
+    svn_info_bytes = subprocess.check_output(command_parts)
+    with io.BytesIO(svn_info_bytes) as svn_info_io:
+        result = ElementTree.parse(svn_info_io)
+    return result
+
+
+def svn_info_revision(repository_uri):
+    entry_xpath = 'entry[@revision]'
+    svn_info_root = svn_info_elements(repository_uri)
+    try:
+        entry_element = svn_info_root.findall(entry_xpath)[0]
+    except IndexError:
+        raise common.VcdbError('XML from "svn info" must contain an element matching XPath %s' % 'entry[@revision]')
+    return entry_element.attrib['revision']
+
+
 def repository_for(session, repository_uri):
     assert session is not None
     assert repository_uri is not None
@@ -140,7 +167,7 @@ def update_repository(session, repository_uri):
     assert repository_uri is not None
 
     repository = repository_for(session, repository_uri)
-    revision = '0:HEAD' # TODO: Update starting revison from last change.
+    revision = '0:HEAD' # TODO: Update starting revision from last change.
     svn_log_xml_path = os.path.join(tempfile.gettempdir(), 'vcdb', 'svn_log.xml')  # TODO: Use a real temporary name.
 
     # Extract and log parse it.

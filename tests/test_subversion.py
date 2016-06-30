@@ -89,6 +89,28 @@ class TestRepositoryBuilder():
         run_svn('move', '--force', hello_py_path, hallo_py_path)
         run_svn('commit', '--message', 'Translated to German.', hallo_py_path, hello_py_path)
 
+        # Rename a file.
+        hallo_welt_py_path = os.path.join(self.work_path, 'hallo_welt.py')
+        run_svn('move', hallo_py_path, hallo_welt_py_path)
+        run_svn('commit', '--message', 'Renamed to clearer name.', hallo_py_path, hallo_welt_py_path)
+
+        # Revert a file to an older version.
+        revision_to_revert_to = subversion.svn_info_revision(self.repository_uri)
+        _write_source(hallo_welt_py_path, [
+            '# Das klassische Hallo Welt.'
+            'print("Hallo Welt!!!")',
+        ])
+        run_svn('commit', '--message', 'Added extra ohmpf.', hallo_welt_py_path)
+        run_svn('update')
+        run_svn('merge', '--revision', 'HEAD:' + revision_to_revert_to, hallo_welt_py_path)
+        run_svn('commit', '--message', 'Toned things down again.', hallo_welt_py_path)
+
+        # Replace a file.
+        run_svn('remove', empty_txt_path)
+        _write_source(empty_txt_path)
+        run_svn('add', empty_txt_path)
+        run_svn('commit', '--message', 'Changed to a different kind of empty.', empty_txt_path)
+
 
 class SubversionTest(unittest.TestCase):
     def setUp(self):
