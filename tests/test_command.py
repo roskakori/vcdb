@@ -1,6 +1,8 @@
 """
 Tests for vcdb command line interface.
 """
+# Copyright (C) 2016 Thomas Aglassinger.
+# Distributed under the GNU Lesser General Public License v3 or later.
 import os.path
 import sqlite3
 import unittest

@@ -9,8 +9,8 @@ numbers from it.
 License
 -------
 
-Vcdb is distributed under GNU Lesser General Public License v3 or later
-(LGPLv3+).
+Copyright (C) 2016 Thomas Aglassinger. Distributed under the GNU Lesser
+General Public License v3 or later (LGPLv3+).
 
 
 History

@@ -1,7 +1,8 @@
 """
 Test common classes and functions for vcdb.
 """
-import datetime
+# Copyright (C) 2016 Thomas Aglassinger.
+# Distributed under the GNU Lesser General Public License v3 or later.
 import os
 import unittest
 

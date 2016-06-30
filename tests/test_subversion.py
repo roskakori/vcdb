@@ -1,6 +1,8 @@
 """
 Tests for Subversion repository.
 """
+# Copyright (C) 2016 Thomas Aglassinger.
+# Distributed under the GNU Lesser General Public License v3 or later.
 import logging
 import os
 import pathlib
