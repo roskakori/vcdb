@@ -1,3 +1,16 @@
+.. image:: https://travis-ci.org/roskakori/vcdb.svg?branch=master
+    :target: https://travis-ci.org/roskakori/vcdb
+    :alt: Build Status
+
+.. image:: https://coveralls.io/repos/roskakori/vcdb/badge.png?branch=master
+    :target: https://coveralls.io/r/roskakori/vcdb?branch=master
+    :alt: Test coverage
+
+.. image:: https://landscape.io/github/roskakori/vcdb/master/landscape.svg
+    :target: https://landscape.io/github/roskakori/vcdb/master
+    :alt: Code Health
+
+
 vcdb
 ====
 
