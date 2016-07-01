@@ -9,8 +9,8 @@ numbers from it.
 Installation
 ------------
 
-Pygount is available from https://pypi.python.org/pypi/vcdb and can be
-installed running::
+Vcdb is available from https://pypi.python.org/pypi/vcdb and can be installed
+running::
 
 $ pip install vcdb
 
