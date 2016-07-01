@@ -170,7 +170,9 @@ def update_repository(session, repository_uri):
 
     repository = repository_for(session, repository_uri)
     revision = '0:HEAD' # TODO: Update starting revision from last change.
-    svn_log_xml_path = os.path.join(tempfile.gettempdir(), 'vcdb', 'svn_log.xml')  # TODO: Use a real temporary name.
+    svn_log_xml_file = tempfile.NamedTemporaryFile(suffix='.xml', prefix='vcdb_svn_log_')
+    svn_log_xml_path = svn_log_xml_file.name
+    svn_log_xml_file.close()  # Close the temp file, we just need its name.
 
     # Extract and log parse it.
     write_svn_log_xml(svn_log_xml_path, repository_uri, revision)
