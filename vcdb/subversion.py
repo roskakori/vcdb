@@ -183,11 +183,11 @@ def update_repository(session, repository_uri):
     for logentry_element in log_root.findall('logentry[@revision]'):
         change = change_from_logentry_element(session, repository, logentry_element)
         _log.debug('  add change: %s', change)
-        session.add(change)
+        session.merge(change)
         for path_element in logentry_element.findall('paths/path'):
             path = path_from_path_element(change, path_element)
             _log.debug('    add path: %s', path)
-            session.add(path)
+            session.merge(path)
         copied_paths = session.query(common.Path).filter(
             common.Path.change_id == change.change_id,
             common.Path.action == 'c'

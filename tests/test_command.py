@@ -31,12 +31,19 @@ class CommandTest(unittest.TestCase):
         except SystemExit as error:
             self.assertEqual(error.code, 0)
 
-    def test_can_build_database(self):
-        def assert_table_has_rows(cursor, table):
-            sql_statement = 'select 1 from ' + table + ' limit 1'
-            has_data = len(list(cursor.execute(sql_statement))) != 0
-            self.assertTrue(has_data, 'table ' + table + ' must contain data')
+    def assert_table_has_rows(self, cursor, table):
+        sql_statement = 'select 1 from ' + table + ' limit 1'
+        has_data = len(list(cursor.execute(sql_statement))) != 0
+        self.assertTrue(has_data, 'table ' + table + ' must contain data')
 
+    def assert_has_vcdb_rows(self, database_path):
+        with sqlite3.connect(database_path) as database:
+            with closing(database.cursor()) as cursor:
+                self.assert_table_has_rows(cursor, 'repositories')
+                self.assert_table_has_rows(cursor, 'changes')
+                self.assert_table_has_rows(cursor, 'paths')
+
+    def test_can_build_database_for_test_subversion_repository(self):
         repository_builder = test_subversion.TestRepositoryBuilder(common.func_name())
         repository_builder.build()
 
@@ -45,12 +52,29 @@ class CommandTest(unittest.TestCase):
         engine_uri = 'sqlite:///' + database_path
         exit_code = command.vcdb_command([repository_builder.repository_uri, engine_uri])
         self.assertEqual(exit_code, 0)
+        self.assert_has_vcdb_rows(database_path)
 
-        with sqlite3.connect(database_path) as database:
-            with closing(database.cursor()) as cursor:
-                assert_table_has_rows(cursor, 'repositories')
-                assert_table_has_rows(cursor, 'changes')
-                assert_table_has_rows(cursor, 'paths')
+    def test_can_build_database_for_vcdb_github_repository(self):
+        repository_uri = 'https://github.com/roskakori/vcdb/trunk'
+        database_path = os.path.join(tests.TEMP_FOLDER, common.func_name() + '.db')
+        engine_uri = 'sqlite:////' + database_path
+        common.ensure_is_removed(database_path)
+
+        exit_code = command.vcdb_command([repository_uri, engine_uri])
+        self.assertEqual(exit_code, 0)
+        self.assert_has_vcdb_rows(database_path)
+
+    def test_can_rebuild_database(self):
+        repository_builder = test_subversion.TestRepositoryBuilder(common.func_name())
+        repository_builder.build()
+
+        database_path = os.path.join(tests.TEMP_FOLDER, common.func_name() + '.db')
+        common.ensure_is_removed(database_path)
+        engine_uri = 'sqlite:///' + database_path
+        for _ in range(2):
+            exit_code = command.vcdb_command([repository_builder.repository_uri, engine_uri])
+            self.assertEqual(exit_code, 0)
+            self.assert_has_vcdb_rows(database_path)
 
 
 if __name__ == '__main__':
