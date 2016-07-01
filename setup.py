@@ -1,5 +1,17 @@
 """
-Setup for pygount.
+Setup for vcdb.
+
+Developer cheat sheet
+---------------------
+
+Tag a release (simply replace ``0.x`` with the current version number)::
+
+  $ git tag -a -m "Tagged version 0.x." v0.x
+  $ git push --tags
+
+Upload release to PyPI::
+
+  $ python setup.py bdist_wheel upload
 """
 import os
 from setuptools import setup, find_packages
@@ -15,9 +27,9 @@ with open(os.path.join(_setup_folder, 'README.rst'), encoding='utf-8') as readme
 setup(
     name='vcdb',
     version=__version__,
-    description='build a database view of a version control repository',
+    description='build SQL database from version control repository',
     long_description=long_description,
-    url='https://github.com/roskakori/pygount',
+    url='https://github.com/roskakori/vcdb',
     author='Thomas Aglassinger',
     author_email='roskakori@users.sourceforge.net',
     license='LGPLv3+',

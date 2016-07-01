@@ -16,6 +16,9 @@ $ pip install vcdb
 
 The minimum supported Python version is 3.4.
 
+The Subversion command line client ``svn`` must be installed and located in
+the command search path (``$PATH`` resp. ``%PATH%``).
+
 
 Usage
 -----
@@ -58,6 +61,6 @@ General Public License v3 or later (LGPLv3+).
 History
 -------
 
-v0.0.1, 2016-07-xx
+v0.1, 2016-07-01
 
-* Initial internal release.
+* Initial public release.
