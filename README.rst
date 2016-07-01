@@ -32,20 +32,18 @@ You can then query the database using e.g. the sqlite command line client, for
 example::
 
 $ sqlite3 /tmp/vcdb.db "select count(1) from changes"
-16
 
-The data model is a work in progress, so use::
+The data model is a work in progress, so their is no documentation yet. To
+see the SQL code used to create all available tables, columns and their
+relations, run::
 
 $ sqlite3 /tmp/vcdb.db ".schema"
-
-to get the SQL code used to create all available tables, columns and their
-relations.
 
 To see all available command line options, run::
 
 $ vcdb --help
 
-To see the current version numnber, run::
+To see the current version number, run::
 
 $ vcdb --version
 
