@@ -123,13 +123,6 @@ class Path(DeclarativeBase):
     base_change_id = Column(String(CHANGE_ID_LENGTH), ForeignKey('changes.change_id'))
     base_path = Column(String(PATH_LENGTH))
 
-    #change = relationship(
-    #    'Change',
-    #    back_populates='paths',
-    #    cascade='all, delete, delete-orphan',
-    #    single_parent=True
-    #)
-
     def __repr__(self):
         result = '<Path(action=%r, kind=%r, path=%r, repository_id=%r, change_id=%r' % (
             self.action, self.kind, self.path, self.repository_id, self.change_id
@@ -141,11 +134,10 @@ class Path(DeclarativeBase):
 
 
 Repository.changes = relationship('Change', back_populates='repository')
-#Change.paths = relationship('Path', back_populates='change')
+
 
 def vcdb_session(engine_uri):
     assert engine_uri is not None
     engine = sqlalchemy.create_engine(engine_uri)
     DeclarativeBase.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    return Session()
+    return sessionmaker(bind=engine)()

@@ -6,7 +6,6 @@ Utility functions to work with Subversion.
 import datetime
 import io
 import logging
-import os
 import subprocess
 import tempfile
 from xml.etree import ElementTree
@@ -63,25 +62,25 @@ def path_from_path_element(change, path_element):
     return result
 
 
-def change_from_logentry_element(session, repository, logentry_element):
-        assert logentry_element.tag == 'logentry'
-        author = logentry_element.find('author').text
-        commit_id = logentry_element.attrib['revision']
-        commit_message = logentry_element.find('msg').text
-        commit_time_text = logentry_element.find('date').text
-        # HACK: Strip the trailing 'Z' which seems to be there for reasons unknown.
-        commit_time_text = commit_time_text[:-1]
-        commit_time = datetime.datetime.strptime(commit_time_text, STRFTIME_FORMAT)
-        change_id = common.change_id_for(repository.repository_id, commit_id)
-        result = common.Change(
-            author=author,
-            change_id=change_id,
-            commit_id=commit_id,
-            commit_time=commit_time,
-            commit_message=commit_message,
-            repository_id=repository.repository_id
-        )
-        return result
+def change_from_logentry_element(repository, logentry_element):
+    assert logentry_element.tag == 'logentry'
+    author = logentry_element.find('author').text
+    commit_id = logentry_element.attrib['revision']
+    commit_message = logentry_element.find('msg').text
+    commit_time_text = logentry_element.find('date').text
+    # HACK: Strip the trailing 'Z' which seems to be there for reasons unknown.
+    commit_time_text = commit_time_text[:-1]
+    commit_time = datetime.datetime.strptime(commit_time_text, STRFTIME_FORMAT)
+    change_id = common.change_id_for(repository.repository_id, commit_id)
+    result = common.Change(
+        author=author,
+        change_id=change_id,
+        commit_id=commit_id,
+        commit_time=commit_time,
+        commit_message=commit_message,
+        repository_id=repository.repository_id
+    )
+    return result
 
 
 def run_svn(command, *options):
@@ -169,7 +168,7 @@ def update_repository(session, repository_uri):
     assert repository_uri is not None
 
     repository = repository_for(session, repository_uri)
-    revision = '0:HEAD' # TODO: Update starting revision from last change.
+    revision = '0:HEAD'  # TODO: Update starting revision from last change.
     svn_log_xml_file = tempfile.NamedTemporaryFile(suffix='.xml', prefix='vcdb_svn_log_')
     svn_log_xml_path = svn_log_xml_file.name
     svn_log_xml_file.close()  # Close the temp file, we just need its name.
@@ -181,7 +180,7 @@ def update_repository(session, repository_uri):
 
     # Process log and add changes and paths.
     for logentry_element in log_root.findall('logentry[@revision]'):
-        change = change_from_logentry_element(session, repository, logentry_element)
+        change = change_from_logentry_element(repository, logentry_element)
         _log.debug('  add change: %s', change)
         session.merge(change)
         for path_element in logentry_element.findall('paths/path'):
