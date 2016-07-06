@@ -103,7 +103,7 @@ class TestRepositoryBuilder():
             'print("Hallo Welt!!!")',
         ])
         run_svn('commit', '--message', 'Added extra ohmpf.', hallo_welt_py_path)
-        run_svn('update')
+        run_svn('update', self.work_path)
         run_svn('merge', '--revision', 'HEAD:' + revision_to_revert_to, hallo_welt_py_path)
         run_svn('commit', '--message', 'Toned things down again.', hallo_welt_py_path)
 
