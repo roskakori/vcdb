@@ -50,6 +50,7 @@ setup(
     keywords='version control repository vcs database query',
     packages=find_packages(exclude=['tests']),
     install_requires=[
+        'pygount>=0.2',
         'sqlalchemy>=0.8.4',
     ],
     entry_points={

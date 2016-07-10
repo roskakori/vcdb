@@ -41,8 +41,11 @@
         <exec executable="pygount" failonerror="true">
             <arg value="--format=cloc-xml"/>
             <arg value="--out=cloc.xml"/>
-            <arg value="--suffix=py"/>
+            <arg value="--suffix=py,xml"/>
             <arg value="--verbose"/>
+            <arg value="build.xml"/>
+            <arg value="vcdb"/>
+            <arg value="tests"/>
         </exec>
     </target>
 
